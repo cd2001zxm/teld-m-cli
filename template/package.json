@@ -16,7 +16,6 @@
     
   },
   "devDependencies": {
-    "@nuxtjs/pwa": "^2.0.8",
     "vux": "^2.9.2",
     "vux-loader": "^1.2.9",
     "teld-nuxt": "^1.0.0",
