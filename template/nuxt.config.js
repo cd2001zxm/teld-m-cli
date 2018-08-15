@@ -25,11 +25,11 @@ module.exports = {
   ],
   plugins: [
     {
-      src: 'teld-vue-m/plugins/vux-plugins',
+      src: '~/plugins/vux-plugins',
       ssr: false
     },
     {
-      src: 'teld-vue-m/plugins/vux-components',
+      src: '~/plugins/vux-components',
       ssr: true
     },
     // {
