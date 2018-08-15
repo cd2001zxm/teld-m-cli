@@ -15,10 +15,9 @@
   "dependencies": {
     "teld-nuxt": "^1.0.0",
     "vux": "^2.9.2",
-    "vux-loader": "^1.2.9",
+    "vux-loader": "^1.2.9"
   },
   "devDependencies": {
-
     "babel-eslint": "^8.2.1",
     "eslint": "^4.15.0",
     "eslint-friendly-formatter": "^3.0.0",
