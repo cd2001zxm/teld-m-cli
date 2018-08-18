@@ -50,7 +50,7 @@ module.exports = {
       app: 'app.js',
       manifest:'manifest.js'
     },
-    uglify:false,
+    uglify:true,
     /*
     ** Run ESLint on save
     */
