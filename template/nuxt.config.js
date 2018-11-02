@@ -71,7 +71,8 @@ module.exports = {
 
       const configs = vuxLoader.merge(config, {
         options: {
-          ssr: true
+          ssr: true,
+          vuxSetBabel:false
         },
         plugins: ['vux-ui', {
           name: 'less-theme',
