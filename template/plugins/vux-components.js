@@ -13,7 +13,7 @@ import {
   Panel,Previewer,Qrcode,Step, StepItem,Swiper,XTable,XProgress,XImg,Actionsheet,Alert,
   Confirm,InlineLoading,LoadMore,Loading,Msg,Popup,PopupHeader,Popover,Toast,XDialog,
   ButtonTab, ButtonTabItem,Drawer,Tab, TabItem,Tabbar, TabbarItem,XHeader,Timeline,TimelineItem,
-  //VChart, VLine, VArea, VBar, VPie, VPoint, VScale, VAxis, VTooltip, VLegend, VGuide,XCircle
+  VChart, VLine, VArea, VBar, VPie, VPoint, VScale, VAxis, VTooltip, VLegend, VGuide,XCircle
 } from 'vux'
 Vue.component('icon', Icon)
 Vue.component('x-button', XButton)
@@ -97,15 +97,17 @@ Vue.component('tabbar-item', TabbarItem)
 Vue.component('x-header', XHeader)
 Vue.component('timeline', Timeline)
 Vue.component('timeline-item', TimelineItem)
-// Vue.component('v-chart', VChart)
-// Vue.component('v-line', VLine)
-// Vue.component('v-area', VArea)
-// Vue.component('v-bar', VBar)
-// Vue.component('v-pie', VPie)
-// Vue.component('v-point', VPoint)
-// Vue.component('v-scale', VScale)
-// Vue.component('v-axis', VAxis)
-// Vue.component('v-guide', VGuide)
-// Vue.component('v-tooltip', VTooltip)
-// Vue.component('v-legend', VLegend)
-// Vue.component('x-circle', XCircle)
+
+
+Vue.component('v-chart', VChart)
+Vue.component('v-line', VLine)
+Vue.component('v-area', VArea)
+Vue.component('v-bar', VBar)
+Vue.component('v-pie', VPie)
+Vue.component('v-point', VPoint)
+Vue.component('v-scale', VScale)
+Vue.component('v-axis', VAxis)
+Vue.component('v-guide', VGuide)
+Vue.component('v-tooltip', VTooltip)
+Vue.component('v-legend', VLegend)
+Vue.component('x-circle', XCircle)

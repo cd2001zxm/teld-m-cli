@@ -16,7 +16,9 @@
     "@antv/f2": "^3.1.15",
     "teld-nuxt": "^1.0.0",
     "vux": "^2.9.2",
-    "vux-loader": "^1.2.9"
+    "vux-loader": "^1.2.9",
+    "element-ui": "^2.4.9",
+    "crypto-js": "^3.1.9-1",
   },
   "devDependencies": {
     "babel-eslint": "^8.2.1",
