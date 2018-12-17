@@ -14,18 +14,19 @@
   },
   "dependencies": {
     "@antv/f2": "^3.1.15",
-    "teld-nuxt": "^1.0.0",
-    "vux": "^2.9.2",
-    "vux-loader": "^1.2.9",
-    "element-ui": "^2.4.9",
     "crypto-js": "^3.1.9-1",
+    "element-ui": "^2.4.9",
+    "teld-nuxt": "^1.0.1",
+    "vux": "^2.9.2",
+    "vux-loader": "^1.2.9"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.1",
+"babel-eslint": "^8.2.1",
     "eslint": "^4.15.0",
     "eslint-friendly-formatter": "^3.0.0",
     "eslint-loader": "^1.7.1",
     "eslint-plugin-vue": "^4.0.0",
+    "teld-vue-m": "^1.0.0",
     "less": "^3.7.1",
     "less-loader": "^4.1.0"
   }
