@@ -3,25 +3,31 @@ const vuxLoader = require('vux-loader')
 
 
 module.exports = {
+  projectName:"",
   analyze:true,
   /*
   ** Headers of the page
   */
   head: {
-    title: 'teldmobile',
+    // title: 'teldmobile',
+    titleTemplate: '%s',
     meta: [
       { charset: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' },
+      { 'http-equiv': 'x-dns-prefetch-control', content: 'on' },
       { hid: 'description', name: 'description', content: 'Nuxt.js project' }
     ],
 
     link: [
-      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      { rel: 'icon', type: 'image/x-icon', href: '/teld.ico' },
+      { rel: 'dns-prefetch', href: '//sgi.wyqcd.cn' },
+      { rel: 'alternate', media: 'only screen and (max-width: 640px)', href: '//web.wyqcd.cn' }
     ]
   },
   css: [
     'vux/src/styles/reset.less',
-    'vux/src/styles/1px.less'
+    'vux/src/styles/1px.less',
+    'element-ui/lib/theme-chalk/index.css'
   ],
   plugins: [
     {
@@ -32,10 +38,14 @@ module.exports = {
       src: '~/plugins/vux-components',
       ssr: true
     },
-    // {
-    //   src: '~/plugins/vux-components-nossr',
-    //   ssr: false
-    // }
+    {
+      src: '~/plugins/element-components',
+      ssr: true
+    },
+    {
+      src: '~/plugins/teld-components',
+      ssr: true
+    }
   ],
   /*
   ** Customize the progress bar color
@@ -50,7 +60,7 @@ module.exports = {
       app: 'app.js',
       manifest:'manifest.js'
     },
-    uglify:true,
+    uglify:false,
     /*
     ** Run ESLint on save
     */
@@ -85,12 +95,25 @@ module.exports = {
       return configs
     }
   },
-
-  modules: [
-    //'@nuxtjs/axios',
-  ],
+  // router: {
+  //   middleware: 'teld'
+  // },
 
   axios: {
     // proxyHeaders: false
+  },
+
+  router: {
+    extendRoutes (routes, resolve) {
+      //PC端
+      routes.push({name: '首页', path: '/ecms/p000001', component: resolve(__dirname, 'pages/ecms/index/pc/Index.vue')})
+      routes.push({name: '在线充值', path: '/ecms/p000002', component: resolve(__dirname, 'pages/ecms/index/pc/OnlineTopUp.vue')})
+      routes.push({name: '预警设置', path: '/ecms/p000003', component: resolve(__dirname, 'pages/ecms/index/pc/EarlyWarningSet.vue')})
+      routes.push({name: '在线退款', path: '/ecms/p000004', component: resolve(__dirname, 'pages/ecms/index/pc/OnlineRefund.vue')})
+
+      //移动端
+      routes.push({name: '首页', path: '/ecms/m000001', component: resolve(__dirname, 'pages/ecms/index/mobile/Index.vue')})
+      routes.push({name: '在线充值', path: '/ecms/m000002', component: resolve(__dirname, 'pages/ecms/index/mobile/OnlineTopUp.vue')})
+    }
   }
 }

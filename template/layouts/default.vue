@@ -50,4 +50,6 @@ html {
   background-color: #35495e;
 }
 </style>
-
+<script>
+  import {isLogin,checkClient} from '@@/components/session'
+</script>

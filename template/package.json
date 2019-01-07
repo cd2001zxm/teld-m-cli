@@ -1,8 +1,8 @@
 {
-  "name": "{{ name }}",
+  "name": "test7",
   "version": "1.0.0",
-  "description": "{{ description }}",
-  "author": "{{ author }}",
+  "description": "Nuxt.js project",
+  "author": "陈栋 <cd2001zxm@126.com>",
   "private": true,
   "scripts": {
     "dev": "nuxt",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@antv/f2": "^3.1.15",
+    "@antv/g2": "^3.4.8",
     "crypto-js": "^3.1.9-1",
     "element-ui": "^2.4.9",
     "teld-nuxt": "^1.0.1",
@@ -21,7 +22,7 @@
     "vux-loader": "^1.2.9"
   },
   "devDependencies": {
-"babel-eslint": "^8.2.1",
+    "babel-eslint": "^8.2.1",
     "eslint": "^4.15.0",
     "eslint-friendly-formatter": "^3.0.0",
     "eslint-loader": "^1.7.1",

@@ -1,7 +1,8 @@
 /**
  * Created by chendong on 2018/9/14.
  */
-import ck from './cookie'
+import {readCookie,eraseCookie,createCookie} from './cookie'
+import {goToLoginPage,getUserInfo} from './sgApi'
 
 function _storageTest(storage){
 
@@ -22,20 +23,41 @@ export function saveGlobelData(key,value) {
   if(_storageTest(window.sessionStorage))
     window.sessionStorage.setItem(key,value)
   else
-    ck.createCookie(key,value)
+    createCookie(key,value)
 }
 
 export function getGlobelData(key) {
   if(_storageTest(window.sessionStorage))
     return window.sessionStorage.getItem(key)
-  return ck.readCookie(key)
+  return readCookie(key)
 }
 
 export function removeGlobelData(key) {
   if(_storageTest(window.sessionStorage))
     window.sessionStorage.removeItem(key)
   else
-    ck.eraseCookie(key)
+    eraseCookie(key)
+}
+
+export function saveLocalData(key,value) {
+  if(_storageTest(window.localStorage))
+    window.localStorage.setItem(key,value)
+  else
+    createCookie(key,value)
+}
+
+export function getLocalData(key) {
+  if(_storageTest(window.localStorage))
+    window.localStorage.getItem(key)
+  else
+    readCookie(key)
+}
+
+export function removeLocalData(key) {
+  if(_storageTest(window.localStorage))
+    window.localStorage.removeItem(key)
+  else
+    eraseCookie(key)
 }
 
 /**
@@ -118,6 +140,53 @@ export function isMobile() {
   var ua = navigator.userAgent.toLowerCase();
   if (/mobile|android|iphone|ipad|phone|micromessenger|dingtalk/i.test(ua))
     return true
-  return false
 
+  var clientWidth = document.documentElement.clientWidth || document.body.clientWidth
+  return clientWidth > 1024?false:true
+
+}
+
+export function isLogin() {
+  if(readCookie("teldb") && readCookie("teldc") && readCookie("teldc")=="0")
+    return true;
+  return false;
+}
+
+export function ClearSessionCookies() {
+  eraseCookie("TELDSID")
+  eraseCookie("telda")
+  eraseCookie("teldb")
+  eraseCookie("teldc")
+  eraseCookie("teldd")
+  eraseCookie("teldk");
+  eraseCookie("teldz")
+  eraseCookie("TELDSID")
+  removeGlobelData("toc_ui")
+}
+
+export async function getSession() {
+
+  if(!isLogin()){
+    ClearSessionCookies()
+    goToLoginPage();
+    return null
+  }
+
+  var val = getGlobelData("toc_ui")
+  if(val)return JSON.parse(val);
+
+  //获取session信息
+  var userinfo = await getUserInfo()
+  userinfo = userinfo.data
+  saveGlobelData("toc_ui",JSON.stringify(userinfo))
+
+  return userinfo;
+}
+
+export function getOrigin() {
+  return location.protocol +"//"+ location.host
+}
+
+export function getBaseLinkUrl(subUrl) {
+  return getOrigin()+subUrl
 }

@@ -1,13 +1,12 @@
 /**
  * Created by chendong on 2018/9/14.
  */
-import Vue from 'vue'
 import axios from 'axios'
 import {setMaxDigits,RSAKeyPair,encryptedString} from './crypt/rsa'
 import {EncryptInterface,cajess,dcajess} from './crypt/aes'
 import {readCookie,eraseCookie,createCookie} from './cookie'
-import {saveGlobelData,getGlobelData,removeGlobelData,randomUrl,randomNum,isInApp,getAppVersion} from './common'
-import teldConfig from '../teld.config'
+import {saveGlobelData,getGlobelData,removeGlobelData,randomUrl,randomNum,isInApp,getAppVersion,ClearSessionCookies} from './common'
+import {getServiceUrl,getUserCenterUrl} from '../teld.config'
 import qs from 'qs'
 
 
@@ -199,7 +198,7 @@ axios.interceptors.response.use(
         var encrypt = EncryptInterface[options.dataEncrypt];
         retData = encrypt.decode(retData)
       }
-      options.sucCallbackFunc(retData, status,xhr);
+      options.sucCallbackFunc(retData);
     }
 
     if(window.BatchID){
@@ -463,9 +462,14 @@ function getIP() {
   return readCookie("teldz");
 }
 
-function goToLoginPage(){
-  if(isInApp())window.Teld.gotoLogin()
-  alert('返回登陆')
+export function goToLoginPage(){
+  if(isInApp()) return window.Teld.gotoLogin()
+  //清理缓存
+  ClearSessionCookies();
+
+  let oldUrl = "?redirect_uri="+ encodeURIComponent(window.location.href);
+  window.location.href=getUserCenterUrl() +oldUrl;
+
 }
 
 function getAccesstoken(){
@@ -486,7 +490,7 @@ function getTokenType() {
 async function aLogin() {
 
   let param = JSON.stringify({"DeviceType":"WEB","ReqSource":100,"ClientIP":getIP()})
-  return await _refreshToken(param,teldConfig.aLoginUrl,"loginInfo",true)
+  return await _refreshToken(param,getServiceUrl("UserAPI-WEBUI-ASLogin"),"loginInfo",true)
 }
 
 /**
@@ -517,7 +521,7 @@ async function refreshToken(isa) {
   }
   var rToken = refresh.split(".").reverse().join(".")
   var param = JSON.stringify({"DeviceType":"WEB","ReqSource":100,"RefreshToken":rToken,"ClientIP":getIP()})
-  var url = !isa?teldConfig.newTokenRefreshUrl:teldConfig.ATokenRefreshUrl
+  var url = !isa?getServiceUrl("UserAPI-WEBUI-SRefreshToken"):getServiceUrl("UserAPI-WEBUI-ASRefreshToken")
   return await _refreshToken(param,url,"refreshToken",isa)
 }
 
@@ -679,7 +683,7 @@ async function _commonGetData(option){
 
   return new Promise((resolve,reject)=>{
     axios(axiosConfig).then(respose=>{
-      resolve()
+      resolve({data:respose.data})
     })
   })
 
@@ -793,6 +797,21 @@ var tokenInterval = window.setInterval(function () {
   }
 },60000)
 
+
+export async function getUserInfo() {
+
+  var url = getServiceUrl("WRPFrame-GetCurrentUser")
+  var retData = "";
+  var dap = {
+    url: url,
+    sucCallbackFunc:function (result){
+      retData = result
+    }
+  }
+
+  return await _commonGetData(dap)
+
+}
 //test
 
 // getDataAsync({
