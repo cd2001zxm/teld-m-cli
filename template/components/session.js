@@ -20,14 +20,15 @@ function isWeb() {
  */
 export function isLogin(content) {
   if(process.client){
-    const {readCookie} = require('@@/plugins/utils/cookie')
-    let islogin = (readCookie("teldb") && readCookie("teldc") && readCookie("teldc")=="0")
+    var cookieUtils = require('@@/plugins/utils/cookie')
+    var readCookie = cookieUtils.readCookie
+    var islogin = (readCookie("teldb") && readCookie("teldc") && readCookie("teldc")=="0")
     return islogin
   }else{
-    const cookie = require('cookie')
-    let cookies = cookie.parse(content.req.headers.cookie || '');
+    var cookie = require('@@/components/cookieIndex')
+    var cookies = cookie.parse(content.req.headers.cookie || '');
     //如果有身份
-    let islogin = (cookies["telda"] && cookies["teldb"] && cookies["teldc"]=="0")
+    var islogin = (cookies["telda"] && cookies["teldb"] && cookies["teldc"]=="0")
     return islogin
 
   }
@@ -49,8 +50,8 @@ export function isLogin(content) {
 
 export function checkClient(that) {
 
-  let locations = location.pathname.split("/")
-  let keyapp = locations[1]
+  var locations = location.pathname.split("/")
+  var keyapp = locations[1]
 
   if(that.$utils.common.isMobile()){
     if(locations[2].startsWith("p")){

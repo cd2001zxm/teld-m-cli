@@ -36,28 +36,7 @@ export function removeGlobelData(key) {
   if(_storageTest(window.sessionStorage))
     window.sessionStorage.removeItem(key)
   else
-    eraseCookie(key)
-}
-
-export function saveLocalData(key,value) {
-  if(_storageTest(window.localStorage))
-    window.localStorage.setItem(key,value)
-  else
-    createCookie(key,value)
-}
-
-export function getLocalData(key) {
-  if(_storageTest(window.localStorage))
-    window.localStorage.getItem(key)
-  else
-    readCookie(key)
-}
-
-export function removeLocalData(key) {
-  if(_storageTest(window.localStorage))
-    window.localStorage.removeItem(key)
-  else
-    eraseCookie(key)
+    ck.eraseCookie(key)
 }
 
 /**
@@ -189,4 +168,52 @@ export function getOrigin() {
 
 export function getBaseLinkUrl(subUrl) {
   return getOrigin()+subUrl
+}
+
+export function LoadGaoDeMap(cb) {
+  if (!window.AMap) {
+    var url = `https://webapi.amap.com/maps?v=1.4.15&key=db9741b828f4ac811937b1793ce4b950&plugin=AMap.ToolBar&callback=MapInit`;
+    var jsapi = window.document.createElement('script');
+    jsapi.charset = 'utf-8';
+    jsapi.src = url
+
+    window.document.head.appendChild(jsapi);
+    window.MapInit = function () {
+      cb()
+    }
+  } else {
+    cb()
+  }
+}
+
+export function getDevice() {
+  var ua = navigator.userAgent.toLowerCase();
+  if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+    return "wx";
+  } else if (/iphone|ipad|ipod/.test(ua)) {
+    return "ios";
+  } else if (/android/.test(ua)) {
+    return "android";
+  }
+}
+
+export function _getQueryString(name,url) {
+  var reg = new RegExp(name+'=([^&]*)', 'i');
+
+  var r = (url?url: window.location.href).match(reg);
+  if (r != null) {
+    return r[1];
+  }
+  return null;
+}
+
+export function isInSP() {
+
+  if(readCookie("issp")=="sp")return true
+  var sp1 = _getQueryString("sp1",window.location.href)
+  if(sp1){
+    createCookie("issp","sp",8)
+    return true;
+  }
+  return false;
 }

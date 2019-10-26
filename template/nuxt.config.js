@@ -45,6 +45,10 @@ module.exports = {
     {
       src: '~/plugins/teld-components',
       ssr: true
+    },
+    {
+      src: '~/plugins/teld-plugins',
+      ssr: false
     }
   ],
   /*
@@ -60,7 +64,7 @@ module.exports = {
       app: 'app.js',
       manifest:'manifest.js'
     },
-    uglify:false,
+    uglify:true,
     /*
     ** Run ESLint on save
     */

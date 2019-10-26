@@ -15,6 +15,8 @@ import {
   ButtonTab, ButtonTabItem,Drawer,Tab, TabItem,Tabbar, TabbarItem,XHeader,Timeline,TimelineItem,
   VChart, VLine, VArea, VBar, VPie, VPoint, VScale, VAxis, VTooltip, VLegend, VGuide,XCircle
 } from 'vux'
+
+
 Vue.component('icon', Icon)
 Vue.component('x-button', XButton)
 Vue.component('divider', Divider)

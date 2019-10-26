@@ -16,7 +16,7 @@ if (!/^\.teld\.(cn|net)+$/i.test(domain)) _nginxsg_ += ':7777';
 
 
 export function getServiceUrl(sid) {
-    return _nginxsg_+"/api/invoke?SID="+sid
+  return _nginxsg_+"/api/invoke?SID="+sid
 }
 
 export function getUserCenterUrl() {

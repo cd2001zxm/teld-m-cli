@@ -1,12 +1,8 @@
-let jteld;
+/**
+ * Created by wangmc on 2017/9/20.
+ */
 
-!function (e, n) {
-  jteld = n(e)
-}(window,function (e) {
-
-  function __type_original(obj) {
-    return Object.prototype.toString.call(obj);
-  }
+!function (e) {
 
   function getAppDevice() {
     if (window.navigator.userAgent.indexOf('TeldIosWebView') !== -1) return 'Ios'
@@ -14,12 +10,12 @@ let jteld;
     else return ''
   }
 
-  function isFunction(fn) {
-    return __type_original(fn) === '[object Function]';
+  function isFunction(obj) {
+    return typeof obj === "function" && typeof obj.nodeType !== "number";
   }
 
   function isObject(obj) {
-    return __type_original(obj) === '[object Object]';
+    return obj !== null && typeof obj === 'object'
   }
 
   function formatData(data, state, errmsg) {
@@ -59,6 +55,9 @@ let jteld;
   }
 
   function callBack(req, res) {
+    // alert("callBack");
+    // alert("res "+res+'type0f res '+ typeof res + "JSON.stringify(res)" +JSON.stringify(res));
+    // alert("JSON.parse(res) "+JSON.parse(res)+'type0f parse res '+ typeof JSON.parse(res));
     if (res && (typeof res == "string")){
       res = JSON.parse(res);
     }
@@ -99,16 +98,16 @@ let jteld;
   if (!e.Teld) {
     var Teld = {
       //webview返回处理
-      goBack: function (call) {
+      teldWebviewGoBack: function (call) {
         registerHandler('teldWebviewGoBack', call)
       },
 
       //关闭webview
-      close: function (opts) {
+      teldWebviewClose: function (opts) {
         callHandler('teldWebviewClose', null, opts)
       },
       //打开新的webview加载url
-      loadUrl:function (opts) {
+      teldWebviewLoadUrl:function (opts) {
         callHandler('teldWebviewLoadUrl',{
             "url":opts.url,
             "share":opts.share
@@ -116,26 +115,26 @@ let jteld;
           opts)
       },
       //隐藏/展示Webview的分享按钮
-      shareEnable: function (opts) {
+      teldWebviewShareEnable: function (opts) {
         callHandler('teldWebviewShareEnable', {
           shareEnable: opts.share
         }, opts)
       },
       //设置webview title
-      setTitle: function (opts) {
+      teldWebviewSetTitle: function (opts) {
         callHandler('teldWebviewSetTitle', {
           title: opts.title
         }, opts)
       },
       //跳转到App原生页面
-      goNativePage:function (opts) {
+      teldGoNativePage:function (opts) {
         callHandler("teldGoNativePage",{
           nativePage:opts.page,
           params:opts.params
         },opts)
       },
       //发起分享
-      share:function (opts) {
+      teldShare:function (opts) {
         callHandler("teldShare",{
           title:opts.title,
           desc:opts.desc,
@@ -144,15 +143,15 @@ let jteld;
         },opts)
       },
       //获取h5分享的内容
-      getShareContent: function (call) {
+      teldGetShareContent: function (call) {
         registerHandler("teldGetShareContent", call)
       },
       //获取支付方式
-      getPayType: function (opts) {
+      teldGetPayType: function (opts) {
         callHandler('teldGetPayType', null, opts)
       },
       //发起支付(plus)
-      goPay: function (opts) {
+      teldGoPay: function (opts) {
         callHandler('teldGoPay', {
           payType: opts.payType,
           respValue: opts.respValue,
@@ -161,25 +160,45 @@ let jteld;
           }
         }, opts)
       },
-      //回到app登陆页面
-      gotoLogin:function () {
-
+      teldAlipayAuth: function (opts) {
+        callHandler('teldAlipayAuth', {url: opts.url}, opts)
       },
-      //获取设备信息
-      getDeviceInfo:function () {
-
+      teldSGCacheControl: function (opts) {
+        callHandler('teldSGCacheControl', {
+          sid: opts.sid,
+          respJson: opts.respJson
+        }, opts)
       },
-      //刷新token
-      refreshToken:function () {
-
+      //存储缓存
+      teldSetStorage: function (opts) {
+        callHandler('teldSetStorage', {
+          key: opts.key, // 缓存的唯一标识。key存本地时，App加前缀“teldjs_”
+          data: opts.data, // 缓存的内容。字符串
+          logoutClean: opts.logoutClean // 退出登录时，是否需要清除。1：清除；0：不清除。默认清除。
+        }, opts)
+      },
+      //获取缓存
+      teldGetStorage: function (opts) {
+        callHandler('teldGetStorage', {
+          key: opts.key
+        }, opts)
+      },
+      //移除缓存
+      teldRemoveStorage: function (opts) {
+        callHandler('teldRemoveStorage', {
+          key: opts.key
+        }, opts)
+      },
+      //充值
+      teldRecharge: function (opts) {
+        callHandler('teldRecharge', {
+          amount: opts.amount,
+          mobile: opts.mobile,
+          activityID: opts.activityID,
+          promotionID: opts.promotionID
+        }, opts)
       }
     }
     e.Teld = Teld
   }
-
-  return Teld
-})
-
-export {
-  jteld
-}
+}(this)

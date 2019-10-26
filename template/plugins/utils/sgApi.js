@@ -4,12 +4,11 @@
 import axios from 'axios'
 import {setMaxDigits,RSAKeyPair,encryptedString} from './crypt/rsa'
 import {EncryptInterface,cajess,dcajess} from './crypt/aes'
+import {dESEncrypt,dESEncryptForSP} from './crypt/des'
 import {readCookie,eraseCookie,createCookie} from './cookie'
-import {saveGlobelData,getGlobelData,removeGlobelData,randomUrl,randomNum,isInApp,getAppVersion,ClearSessionCookies} from './common'
+import {saveGlobelData,getGlobelData,removeGlobelData,randomUrl,randomNum,isInApp,getAppVersion,ClearSessionCookies,getDevice,isInSP,_getQueryString} from './common'
 import {getServiceUrl,getUserCenterUrl} from '../teld.config'
 import qs from 'qs'
-
-
 
 /***
  * 全局常量
@@ -35,32 +34,19 @@ const DEFALULT_AJAX_PARAM= {
 }
 
 
-//*************************************axios全局设置****************************************************
-//number of milliseconds
-//axios.defaults.timeout = 180000
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+//axios全局设置
 
-//请求发送前，加入sg相关信息
-axios.defaults.transformRequest=[function (data, headers) {
-  // Do whatever you want to transform the data
-  return data;
-}]
+//前端不默认超时时间
+//axios.defaults.timeout = 180000
+
+//默认提交类型
+axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 
 //失败重试次数
 axios.defaults.retry = 3;
 
-//请求的间隙
+//重试请求的时间间隔
 axios.defaults.retryDelay = 1000;
-
-// axios.defaults.paramsSerializer = function(params) {
-//   return qs.stringify(params)
-// }
-
-// axios.interceptors.request.use(function (config) {
-//   return config;
-// }, function (error) {
-//   return Promise.reject(error);
-// });
 
 axios.interceptors.response.use(
   function axiosSuccessInterceptor(respose) {
@@ -73,12 +59,11 @@ axios.interceptors.response.use(
       if (options.sucCallbackFunc) {
         options.sucCallbackFunc(retData,respose.config);
       }
-      return respose
+      return respose;
     }
 
-    //异常
+    //异常处理，兼容不同的数据格式
     if(retData.hasOwnProperty("ErrorCode") || (retData.hasOwnProperty("errcode") && retData.errcode!="" && retData.errcode != null)){
-
 
       var ErrorCode = retData.hasOwnProperty("ErrorCode")?retData.ErrorCode:retData.errcode;
       var ErrorInfo = retData.hasOwnProperty("ErrorInfo")?retData.ErrorInfo:retData.errmsg;
@@ -89,26 +74,30 @@ axios.interceptors.response.use(
         ErrorCode =="TTP-Security-0002" ||
         ErrorCode =="TTP-SG-2003")){
         window.Teld.gotoLogin();
-        return respose
+        return respose;
       }
 
       //无效的Http请求上下文
       if(ErrorCode == "TTP-SG-1001"){
         goToLoginPage()
-        return respose
+        return respose;
       }
-
 
       //session过期
       if(ErrorCode =="TTP-SG-1013"){
         if(window.handleTokenTimeout){
           var htt = window.handleTokenTimeout.call(null)
-          if(htt==false)return respose
+          if(htt==false)return respose;
         }else
           goToLoginPage()
-        return respose
+        return respose;
       }
 
+      let backoff = new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve();
+        }, options.retryDelay || 1);
+      });
 
       //Token过期
       if((ErrorCode == "TTP-SG-1011" || ErrorCode =="TTP-Security-0002") ){
@@ -117,12 +106,15 @@ axios.interceptors.response.use(
         if(ErrorInfo && ErrorInfo.indexOf("IP不一致")!=-1){
 
           //app内嵌h5的场合，调用app跳登陆
-          if(isInApp())return goToAppLogin();
+          if(isInApp()) {
+            goToAppLogin();
+            return respose
+          }
           //ExceptionReport(this.url,this.data,xhr.responseText);
           //跳转到登陆页面
-          gotoLoginConfirm(window.localeMessage.localeMsg.SGIPChange)
+          gotoLoginConfirm("IP不一致需要重新跳转登陆")
 
-          return respose
+          return respose;
         }
 
         if(readCookie("teldb")){
@@ -130,28 +122,32 @@ axios.interceptors.response.use(
           options.tokenRetry++
 
           if(options.tokenRetry >= 3){
-            gotoLoginConfirm(window.localeMessage.localeMsg.SGRefreshTokenFalse)
-            return respose
-          }
-
-          if(options.errorRetry){
-
-            //刷新失败跳到登录页面，成功了retry一次
-            //由于有定时刷新token，不再进行队列处理
-            refreshToken(options.isa).then(function () {
-              //return sequence(window.refreshTokenTask, option => _commonGetData(option))
-              return _commonGetData(options)
-            })
-
-
+            gotoLoginConfirm("失败重试大于3次")
+            return respose;
           }
 
 
-          return respose
+          //if(options.errorRetry){
+
+          //刷新失败跳到登录页面，成功了retry一次
+          //由于有定时刷新token，不再进行队列处理
+          refreshToken(options.isa).then(function () {
+            //return sequence(window.refreshTokenTask, option => _commonGetData(option))
+            //return _commonGetData(options)
+            //
+            return backoff.then(function() {
+              return axios(options);
+            });
+          })
+
+
+          //}
+
+          return respose;
         }
         else
           goToLoginPage();
-        return respose
+        return respose;
       }
 
       //时间戳不整合
@@ -160,43 +156,26 @@ axios.interceptors.response.use(
         options.__retryCount = options.__retryCount || 0;
 
         if(options.__retryCount >= options.retry) {
-          //超出重试最大次数
-          //TODO:
-          // Reject with the error
-          return Promise.reject(err);
+          return respose;
         }
-
 
         options.__retryCount += 1;
 
-
-        let backoff = new Promise(function(resolve) {
-          setTimeout(function() {
-            resolve();
-          }, options.retryDelay || 1);
-        });
-
-
         return backoff.then(function() {
-          return axios(config);
+          return axios(options);
         });
 
-      }
-
-    }else{
-
-      if(isInApp() && ret.data=="stimeout"){
-        goToAppLogin();return respose
       }
 
     }
+
 
     //正常
     if (options.sucCallbackFunc) {
       //对结果进行
       if(options.dataEncrypt){
         var encrypt = EncryptInterface[options.dataEncrypt];
-        retData = encrypt.decode(retData)
+        retData.data = encrypt.decode(retData.data)
       }
       options.sucCallbackFunc(retData);
     }
@@ -204,15 +183,14 @@ axios.interceptors.response.use(
     if(window.BatchID){
       //上报全链路
       var TimeSpan = (new Date()).getTime() - startTime
-      uploadTrace(data["Teld-RequestID"],TimeSpan,"OK",beginTime,ServiceId)
+      //uploadTrace(data["Teld-RequestID"],TimeSpan,"OK",beginTime,ServiceId)
     }
 
-    return respose
+    return respose;
 
   },
   function axiosRetryInterceptor(err) {
 
-    console.log("=========axiosRetryInterceptor ======")
     let config = err.config;
 
     // If config does not exist or the retry option is not set, reject
@@ -222,7 +200,7 @@ axios.interceptors.response.use(
     if(window.BatchID){
       //上报全链路
       var TimeSpan = (new Date()).getTime() - startTime
-      uploadTrace(data["Teld-RequestID"],TimeSpan,"Error",config.beginTime,config.ServiceId)
+      //uploadTrace(data["Teld-RequestID"],TimeSpan,"Error",config.beginTime,config.ServiceId)
     }
 
     let retData = err.response.data
@@ -246,7 +224,7 @@ axios.interceptors.response.use(
         //超出重试最大次数
         //TODO:
         // Reject with the error
-        return Promise.reject(err);
+        return Promise.reject();
       }
 
 
@@ -272,31 +250,54 @@ axios.interceptors.response.use(
     }
 
     if(config.showError==false){}else{
-      let _errmsg = retData.ErrorInfo
-      NotifyErrorInfo(_errmsg)
+      console.error(retData.ErrorInfo)
+      //NotifyErrorInfo(_errmsg)
     }
 
     return Promise.resolve()
-});
+  });
 
 /**
  * 消息提示
  * @param msg
  * @constructor
  */
-function NotifyErrorInfo(msg) {
-  alert(msg)
+// function NotifyErrorInfo(msg) {
+//   alert(msg)
+// }
+
+
+function gotoLoginConfirm() {
+  if(isInSP())return console.error("token异常，不该存在该提示，请联系陈栋")
+  window.setTimeout(function () {
+    if(readCookie("telda")){
+      getDataAsync({
+        url:getServiceUrl("UserAPI-WEBUI-Logout"),
+        data:{
+          logoutInfo: JSON.stringify({
+            "AccessToken":readCookie("telda"),
+            "TELDSID":readCookie("TELDSID")
+          })
+        },
+        sucCallbackFunc:function (data) {
+          ClearSessionCookies()
+          var uri = window.location.href;
+
+          var oldUrl = "?redirect_uri="+ encodeURIComponent(uri);
+          window.location.href=getUserCenterUrl() +oldUrl;
+        }
+      })
+
+    }else{
+      ClearSessionCookies()
+      var uri = window.location.href;
+      if(window.isSaas)uri=window.location.protocol+"//"+window.p_context.SubApplication+window.domain
+      var oldUrl = "?redirect_uri="+ encodeURIComponent(uri);
+      window.location.href=window.UserCenterUrl +oldUrl;
+    }
+  },500)
 }
 
-function _getQueryString(name,url) {
-  var reg = new RegExp(name+'=([^&]*)', 'i');
-
-  var r = (url?url: window.location.href).match(reg);
-  if (r != null) {
-    return r[1];
-  }
-  return null;
-}
 
 function getCurDateFormat() {
   return (new Date()).format("yyyy-MM-dd hh:mm:ss")
@@ -313,6 +314,123 @@ async function sequence(tasks, fn) {
 
 //***********************************SG相关参数设置******************************************************
 
+// function AndroidTokenTimeout() {
+//   window.teld.updateRefreshToken()
+// }
+//
+// function IOSTokenTimeout() {
+//   var action = '//jsoc///{"action":"askForToken"}';
+//   var iframe = document.createElement("iframe")
+//   iframe.id="IOSNotifyFrame"
+//   iframe.src = action;
+//   iframe.width=0
+//   iframe.height=0
+//   document.body.appendChild(iframe)
+//
+// }
+//
+// function sendToken(accessToken,refreshToken){
+//
+//   //teldc必有
+//   if(readCookie("teldc")=="1") createCookie("teldk",accessToken,15*24*3600)
+//   else createCookie("telda",accessToken,15*24*3600)
+//
+//   createCookie("teldb",refreshToken,15*24*3600)
+//   if(document.getElementById("IOSNotifyFrame"))document.getElementById("IOSNotifyFrame").remove()
+// }
+//
+// function askForDeviceInfo() {
+//   var action = '//jsoc///{"action":"askForDeviceInfo"}';
+//   var iframe = document.createElement("iframe")
+//   iframe.id="IOSDeviceInfoFrame"
+//   iframe.src = action;
+//   iframe.width=0
+//   iframe.height=0
+//   alert("askForDeviceInfo")
+// }
+//
+// window.sendDeviceInfo = function(deviceInfo) {
+//   window.deviceInfo=deviceInfo;
+//   if(document.getElementById("IOSDeviceInfoFrame"))document.getElementById("IOSDeviceInfoFrame").remove()
+//   createCookie("DeviceInfoForIframe",window.encodeURIComponent(deviceInfo),15*24*3600)
+// }
+
+
+
+function AndroidTokenTimeout() {
+  window.teld.updateRefreshToken();
+}
+
+function IOSTokenTimeout() {
+  var action = '//jsoc///{"action":"askForToken"}';
+  var iframe = document.createElement("iframe");
+  iframe.id = "IOSNotifyFrame";
+  iframe.src = action;
+  document.documentElement.appendChild(iframe);
+  setTimeout(function () {
+    document.documentElement.removeChild(iframe)
+  }, 0)
+}
+
+function askForDeviceInfo() {
+  var action = '//jsoc///{"action":"askForDeviceInfo"}';
+  var iframe = document.createElement("iframe");
+  iframe.id = "IOSDeviceInfoFrame";
+  iframe.src = action;
+  document.documentElement.appendChild(iframe);
+  setTimeout(function () {
+    document.documentElement.removeChild(iframe)
+  }, 0)
+}
+
+function iosJSOC() {
+  var iframe = document.createElement('iframe');
+  iframe.src = '//JSOC///{\"action\":\"login\",\"params\":\"\"}';
+  iframe.style.display = 'none';
+  document.documentElement.appendChild(iframe);
+  setTimeout(function () {
+    document.documentElement.removeChild(iframe)
+  }, 0)
+}
+
+function goToAppLogin() {
+
+  //跳登陆前清理cookie
+  //_wrpClearSessionCookies();
+
+  if (getDevice() == "android") {
+    window.teld.goToLogin();
+  } else {
+    var src = 'http://JSOC///{\"action\":\"login\",\"params\":\"\"}';
+    iosJSOC(src);
+  }
+};
+
+async function _appMutual() {
+
+  var promise = void 0;
+
+  if(window.navigator.userAgent.indexOf("TeldIosWebView") !=-1){
+
+    promise = new Promise((resolve,reject)=>{
+      //IOS获取设备信息
+      window.sendDeviceInfo = function(deviceInfo) {
+        resolve(deviceInfo);
+      }
+      askForDeviceInfo();
+    })
+  }
+
+  if(window.navigator.userAgent.indexOf("TeldAndroidWebView") !=-1){
+    promise = new Promise((resolve,reject)=>{
+      window.deviceInfo = window.teld.askForDeviceInfo()
+      resolve(deviceInfo);
+    })
+  }
+
+  return promise
+}
+
 /**
  * app内运行的sg参数设置
  * @param data
@@ -320,27 +438,45 @@ async function sequence(tasks, fn) {
  * @param istrace
  * @private
  */
-function _appSgParamSetting(data,time,istrace) {
+async function _appSgParamSetting(data,time,istrace) {
 
-  if(window.navigator.userAgent.indexOf("TeldIosWebView") !=-1){
-
-    askForDeviceInfo();
-  }
-  if(window.navigator.userAgent.indexOf("TeldAndroidWebView") !=-1){
-
-    window.deviceInfo = window.teld.askForDeviceInfo()
-  }
-
+  // var isa = getTokenType()=="1"?true:false
+  //
+  // let dtime = Math.round(new Date().getTime()/1000)
+  //
+  // //需要时间校准
+  // var ttt = getGlobelData("teldTTT")?getGlobelData("teldTTT"):0;
+  // if(time){
+  //
+  //   ttt = time - dtime;
+  //   saveGlobelData("teldTTT",ttt)
+  // }
+  //
+  // dtime = dtime + new Number(ttt)
+  //
+  // data["X-Token"] = isa?readCookie("teldk"):getAccesstoken()
+  // //时间戳明文
+  // data["ATS"]=dtime
+  // //时间戳密文
+  // data["AVER"]=dESEncrypt(dtime+"")
+  // //来源设备IP
+  // data["ASDI"]=readCookie("deviceID")
+  // //来源
+  // data["ARS"]="APP"
+  // //城市名称
+  // data["ACOI"]=readCookie("ta_cityName")
+  // //定位城市
+  // data["ACOL"]=readCookie("ta_cityCode")
+  var deviceInfo = await _appMutual(data, time, istrace);
 
   //无身份的时候，app返回为空
-  if(!window.deviceInfo || window.deviceInfo == "")return
-  var dInfo = window.deviceInfo.split(",")
+  if(!deviceInfo || deviceInfo == "")return window.alert("和app交互失败")
 
-  //window.Teld.getDeviceInfo
-  var isa = getTokenType()=="1"?true:false
+  var dInfo = deviceInfo.split(",")
 
+  var isa = readCookie("teldc")=="1"?true:false
 
-  data["X-Token"] = isa?readCookie("teldk"):getAccesstoken()
+  data["X-Token"] = isa?readCookie("teldk"):readCookie("telda")
   //时间戳明文
   data["ATS"]=dInfo[1]
   //时间戳密文
@@ -358,7 +494,40 @@ function _appSgParamSetting(data,time,istrace) {
     data["Teld-RequestID"]=(new Date()).getTime()+""+randomNum(10)
   }
 
-  window.deviceInfo = ""
+  return data;
+}
+
+function _spSgParamSetting(data,time,istrace) {
+
+  var isa = getTokenType()=="1"?true:false
+
+  let dtime = Math.round(new Date().getTime()/1000)
+
+  //需要时间校准
+  var ttt = getGlobelData("teldTTT")?getGlobelData("teldTTT"):0;
+  if(time){
+
+    ttt = time - dtime;
+    saveGlobelData("teldTTT",ttt)
+  }
+
+  dtime = dtime + new Number(ttt)
+
+  data["X-Token"] = isa?readCookie("teldk"):getAccesstoken()
+  //时间戳明文
+  data["STS"]=dtime
+  //时间戳密文
+  data["SVER"]=dESEncryptForSP(dtime+"")
+  //来源设备IP
+  data["SSDI"]=getIP()
+  //来源
+  data["SRS"]="SP"
+  //城市名称
+  data["SCOI"]=""
+  //定位城市
+  data["SCOL"]=""
+
+  return data
 }
 
 /**
@@ -368,7 +537,7 @@ function _appSgParamSetting(data,time,istrace) {
  * @param istrace
  * @private
  */
-function _webSgParamSetting(data,time,istrace) {
+async function _webSgParamSetting(data,time,istrace) {
 
   var __c ="010001";
   var __d ="C2D84A72668932EBE5CC2BADB5DE288E59AD587775C1E45F33F6CC9DAB376C793AFF12050C0648D5C3016F685B9F4FA2460A59B6B07793808B4E68A883CA2830FD7895C66F68F64A829DB99DEDE978EC2E04711184A872C1F43956B1B72CFA803C1D677BAE386209368B3F3ED7A8CB06BEC64B0D0369EE62A49E6B417FC55959"
@@ -421,7 +590,10 @@ function _webSgParamSetting(data,time,istrace) {
   if(window.BatchID && istrace){
     data["Teld-RequestID"]=(new Date()).getTime()+""+randomNum(10)
   }
+
+  return data
 }
+
 
 
 /**
@@ -432,23 +604,24 @@ function _webSgParamSetting(data,time,istrace) {
  * @returns {*}
  * @private
  */
-function sgParamSetting(data,time,istrace) {
+async function  sgParamSetting(data,time,istrace) {
 
+  if(isInSP())return _spSgParamSetting(data,time,istrace)
   if(!isInApp())return _webSgParamSetting(data,time,istrace);
-  if(getAppVersion()>3) return  _appSgParamSetting(data,time,istrace);
+  return  _appSgParamSetting(data,time,istrace);
 
-  var type = getTokenType()
-  if(!type){
-    //第一次匿名登陆(没有telda也没有teldc)也会走这里
-    if(!readCookie("telda"))
-      _webSgParamSetting(data,time,istrace);
-  }
-  //匿名走web
-  else if(type=="1"){
-    _webSgParamSetting(data,time,istrace);
-  }else{
-    _appSgParamSetting(data,time,istrace);
-  }
+  // var type = getTokenType()
+  // if(!type){
+  //   //第一次匿名登陆(没有telda也没有teldc)也会走这里
+  //   if(!readCookie("telda"))
+  //     _webSgParamSetting(data,time,istrace);
+  // }
+  // //匿名走web
+  // else if(type=="1"){
+  //   _webSgParamSetting(data,time,istrace);
+  // }else{
+  //   _appSgParamSetting(data,time,istrace);
+  // }
 
 }
 
@@ -458,11 +631,16 @@ function sgParamSetting(data,time,istrace) {
 //****************************************返回登陆&&匿名登陆&&token刷新*************************************************
 
 function getIP() {
-
+  if(isInSP() && _getQueryString("DeviceId",window.location.href)){
+    createCookie("teldz",_getQueryString("DeviceId",window.location.href),8)
+  }
   return readCookie("teldz");
 }
 
 export function goToLoginPage(){
+
+  if(isInSP()) return console.error("刷新token异常，不该存在该提示，请联系陈栋")
+
   if(isInApp()) return window.Teld.gotoLogin()
   //清理缓存
   ClearSessionCookies();
@@ -490,19 +668,32 @@ function getTokenType() {
 async function aLogin() {
 
   let param = JSON.stringify({"DeviceType":"WEB","ReqSource":100,"ClientIP":getIP()})
+  if(isInSP()){
+    param = JSON.stringify({"DeviceType":"SP","ReqSource":100,"DeviceId":getIP()})
+  }
   return await _refreshToken(param,getServiceUrl("UserAPI-WEBUI-ASLogin"),"loginInfo",true)
 }
 
+function TeldDecodeUrl(url) {
+  url = decodeURIComponent(url)
+  url = url.split('codedStringTeld')
+  url = url.join('.')
+  return url
+}
 /**
  * 刷新Token
  * @param func 刷新Token后，回调函数
  */
-async function refreshToken(isa) {
+export async function refreshToken(isa) {
 
   if(isInApp()) {
-    if(getAppVersion()>3)return _refreshAppToken();
-    //app3.8版本，非匿名
-    if(getTokenType()=="0")return _refreshAppToken();
+
+    return _refreshAppToken();
+
+    // if(getAppVersion()>3)return _refreshAppToken();
+    //
+    // //app3.8版本，非匿名
+    // if(getTokenType()=="0")return _refreshAppToken();
 
     //app3.8版本，刷新匿名token时，走web
   }
@@ -519,16 +710,66 @@ async function refreshToken(isa) {
     if(!readCookie("teldb"))return;
 
   }
+
   var rToken = refresh.split(".").reverse().join(".")
+
   var param = JSON.stringify({"DeviceType":"WEB","ReqSource":100,"RefreshToken":rToken,"ClientIP":getIP()})
   var url = !isa?getServiceUrl("UserAPI-WEBUI-SRefreshToken"):getServiceUrl("UserAPI-WEBUI-ASRefreshToken")
+  if(isInSP()){
+    if(rToken.indexOf(".")==-1){
+      rToken = TeldDecodeUrl(rToken)
+    }
+    param = JSON.stringify({"DeviceType":"SP","ReqSource":100,"RefreshToken":rToken,"DeviceId":getIP()})
+
+  }
   return await _refreshToken(param,url,"refreshToken",isa)
 }
 
 
-function _refreshAppToken() {
-  window.Teld.refreshToken()
+//function _refreshAppToken() {
+
+  // if(window.navigator.userAgent.indexOf("TeldIosWebView") !=-1){
+  //   IOSTokenTimeout()
+  //   return
+  // }
+  // if(window.navigator.userAgent.indexOf("TeldAndroidWebView") !=-1){
+  //   AndroidTokenTimeout()
+  //   return
+  // }
+//}
+
+async function _refreshAppToken(isa) {
+
+  if (window.navigator.userAgent.indexOf("TeldIosWebView") != -1) {
+
+    return new Promise((resolve,reject)=>{
+      //app回调方法
+      window.sendToken = function (accessToken, refreshToken) {
+
+        //teldc必有
+        if (readCookie("teldc") == "1")
+          _createCookie("teldk", accessToken, 15 * 24 * 3600);
+        else
+          _createCookie("telda", accessToken, 15 * 24 * 3600);
+
+        _createCookie("teldb", refreshToken, 15 * 24 * 3600);
+
+        resolve();
+      }
+      IOSTokenTimeout();
+    })
+  }
+  if (window.navigator.userAgent.indexOf("TeldAndroidWebView") != -1) {
+
+    return new Promise((resolve,reject)=>{
+      AndroidTokenTimeout();
+      resolve();
+    })
+  }
+
 }
+
+
 
 async function _refreshToken(param,url,paremkey,isa) {
 
@@ -544,7 +785,6 @@ async function _refreshToken(param,url,paremkey,isa) {
     UUID:(new Date()).getTime()+""+randomNum(10)
   })
 
-
   sgParamSetting(data);
 
   return new Promise((resolve,reject)=>{
@@ -556,13 +796,15 @@ async function _refreshToken(param,url,paremkey,isa) {
       data: qs.stringify(data)
     }).then(respose => {
       let rdata = respose.data
+
       if(rdata && rdata.state=="1"){
+
         var decryptData = dcajess(rdata.data)
         var realData = dcajess(decryptData.Data,decryptData.UTS+"000000",decryptData.UVER)
 
         if(realData.TokenType == 1){
           createCookie("teldk",realData.AccessToken,realData.ExpiresIn*1000);
-          if(paremkey=="loginInfo") createCookie("teldz",realData.ClientIP,60000*1000);
+          if(paremkey=="loginInfo") createCookie("teldz",(isInSP()?readCookie("teldz"):realData.ClientIP),60000*1000);
           else createCookie("teldz",readCookie("teldz"),60000*1000);
         }else{
           createCookie("telda",realData.AccessToken,realData.ExpiresIn);
@@ -589,7 +831,6 @@ async function _refreshToken(param,url,paremkey,isa) {
 }
 
 
-
 //****************************************ajax发送***************************************************
 // window.refreshTokenTask = []
 // window.tokenRefreshing = false
@@ -599,7 +840,6 @@ async function _refreshToken(param,url,paremkey,isa) {
  * @private
  */
 async function _commonGetData(option){
-
 
   let options = Object.assign({},DEFALULT_AJAX_PARAM, option);
 
@@ -612,34 +852,21 @@ async function _commonGetData(option){
   // }
 
   //处理匿名的SG请求
-  let isa = options.isAnonymous
+  var isa = options.isAnonymous || false;
 
-  if(getTokenType() &&  getTokenType()=="1"){
-    isa = true;
-  }
+  var type = readCookie("teldc")
 
   //没有teldc就认为是匿名，需要匿名登陆
-  if(!getTokenType()){
+  if (type == "1" || type==null) {
     isa = true;
   }
 
-  /***
-   * app3.8.3
-   * 登陆后由于只有telda和teldb
-   * 只要有telda就认为是非匿名
-   */
-  if(isInApp() && getAppVersion()<=3){
-
-    if(readCookie("telda")){
-      isa = false
-      //同时把teldc设置成非匿名
-      createCookie("teldc","0",SESSION_TIME_OUT)
-      eraseCookie("teldk")
-    }else{
-      isa = true
-      //同时把teldc设置成非匿名
-      createCookie("teldc","1",SESSION_TIME_OUT)
-    }
+  //匿名
+  if(type == 1 && !readCookie("teldk") && readCookie("teldb")){
+    await refreshToken(true)
+  }
+  if(type == 0 && !readCookie("telda") && readCookie("teldb")){
+    await refreshToken(false)
   }
 
   if(isa){
@@ -672,7 +899,7 @@ async function _commonGetData(option){
     data = encrypt.encode(data)
   }
 
-  sgParamSetting(data,null,options.istrace);
+  data = await sgParamSetting(data,null,options.istrace);
 
   let axiosConfig = Object.assign(options,{
     method: 'post',
@@ -784,18 +1011,21 @@ export function getDataAsyncAes(dap) {
 }
 
 function autoRefreshToken(isa) {
+
   window.setInterval(function () {
-    refreshToken(getTokenType()=="0"?false:true)
+      refreshToken(getTokenType()=="0"?false:true)
   },60000)
 }
 
 //主动刷新token
-var tokenInterval = window.setInterval(function () {
-  if(getTokenType()){
-    autoRefreshToken()
-    window.clearInterval(tokenInterval)
-  }
-},60000)
+if(!isInApp() && !isInSP()){
+  var tokenInterval = window.setInterval(function () {
+    if(getTokenType()){
+      autoRefreshToken()
+      window.clearInterval(tokenInterval)
+    }
+  },60000)
+}
 
 
 export async function getUserInfo() {
@@ -812,19 +1042,4 @@ export async function getUserInfo() {
   return await _commonGetData(dap)
 
 }
-//test
 
-// getDataAsync({
-//   url:"http://sgi.wyqcd.net:7777/api/invoke?SID=CMS-GetWSTitleGroup",
-//   data:{appId:""}
-// })
-//
-// getDataAsync({
-//   url:"http://sgi.wyqcd.net:7777/api/invoke?SID=CMS-GetStaInfo",
-//   data:{appId:""}
-// })
-
-// getDataAsync({
-//   url:"http://sgi.wyqcd.net:7777/api/invoke?SID=CSM-GetStationDivision",
-//   data:{appId:""}
-// })
