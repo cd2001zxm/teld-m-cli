@@ -31,6 +31,8 @@
     "teld-vue-m": "^1.0.0",
     "less": "^3.7.1",
     "less-loader": "^4.1.0",
-    "vue-server-renderer":"2.5.17"
+    "vue-server-renderer":"2.5.17",
+    "clipboard": "^2.0.4",
+    "vue-mugen-scroll": "^0.2.5",
   }
 }
