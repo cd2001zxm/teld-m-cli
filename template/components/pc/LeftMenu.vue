@@ -4,7 +4,7 @@
       <template v-for="item in menuData">
         <li class="menu-item">
           <div class="menu-wrapper menu-icon">
-            <span class="menu-link menu-item-level-1">{{item.name}}</span>
+            <span class="menu-link menu-item-level-1"></span>
             <div class="menu-icon-wrapper"><i v-bind:class="item.icon? ('menu-link-icon '+item.icon):''"></i></div>
           </div>
           <ul class="menu sub-menu">

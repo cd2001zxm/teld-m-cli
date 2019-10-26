@@ -6,7 +6,7 @@
           <div class="accounts">
             <div class="banner-item">
               <el-dropdown type="primary" :show-timeout="200" v-show="isLogin">
-                <span class="el-dropdown-link link">{{userName}}<i class="el-icon-arrow-down el-icon--right"></i></span>
+                <span class="el-dropdown-link link"><i class="el-icon-arrow-down el-icon--right"></i></span>
                 <el-dropdown-menu slot="dropdown">
                   <el-dropdown-item>修改密码</el-dropdown-item>
                   <el-dropdown-item>修改用户信息</el-dropdown-item>

@@ -4,7 +4,7 @@
       <div class="logo">
         <a id="J_logoHomeUrl" href="#">
           <img v-bind:src="'/teldlogo.png'" v-bind:alt="appName">
-          <span style="font-size: 15px;color: #5c5a5a;position: absolute;margin-left: -112px;height: 56px;vertical-align: middle;line-height: 56px;font-weight: 550;">{{appName}}</span>
+          <span style="font-size: 15px;color: #5c5a5a;position: absolute;margin-left: -112px;height: 56px;vertical-align: middle;line-height: 56px;font-weight: 550;"></span>
         </a>
       </div>
       <ul id="J_subMenuUl" class="fn-clear mi-nav-items" style="list-style: none;margin-left: 300px;">
